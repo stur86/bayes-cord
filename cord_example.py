@@ -158,6 +158,12 @@ def _(cord_test, np, plot_beta_area, plot_beta_bound, plot_beta_function, plt):
     return
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""Now let's see another example, this time using synthetic data:""")
+    return
+
+
 @app.cell
 def _(SyntheticCTable, cord_test, mo):
     # Try now with synthetic data simulating a very rare event
