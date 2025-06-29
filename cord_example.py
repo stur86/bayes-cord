@@ -160,6 +160,31 @@ def _(cord_test, np, plot_beta_area, plot_beta_bound, plot_beta_function, plt):
 
 @app.cell(hide_code=True)
 def _(mo):
+    log_or_slider = mo.ui.slider(start=0.0, stop=4.0, step=0.1)
+    return (log_or_slider,)
+
+
+@app.cell(hide_code=True)
+def _(log_or_slider, mo, np, plot_beta_bound, plot_beta_function, plt):
+    _fig, _ax = plt.subplots(figsize=(5,5))
+
+    _test_ctable = np.array([[5, 12], [6, 4]])
+    plot_beta_function(_test_ctable, _ax)
+    plot_beta_bound(np.exp(log_or_slider.value), _ax)
+    plot_beta_bound(np.exp(-log_or_slider.value), _ax)
+
+    mo.vstack([
+        mo.md("""
+        Here we can set our log odds width and see the corresponding interval plotted.
+        """),
+        mo.hstack(["Log odds ratio width: ", log_or_slider, f"{log_or_slider.value}"], justify="start"),
+        mo.left(_fig)
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
     mo.md(r"""Now let's see another example, this time using synthetic data:""")
     return
 
