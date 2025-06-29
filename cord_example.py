@@ -11,7 +11,7 @@ def _():
     from bayes_cord import cord_test
     from test_data import SyntheticCTable
     import matplotlib.pyplot as plt
-    return cord_test, mo, np, plt
+    return SyntheticCTable, cord_test, mo, np, plt
 
 
 @app.cell(hide_code=True)
@@ -119,18 +119,19 @@ def _(mo):
 
 @app.cell
 def _(cord_test, np, plot_beta_area, plot_beta_bound, plot_beta_function, plt):
-    _fig, _ax = plt.subplots(1, 3, figsize=(14,4.5))
 
     # Try multiplying this table by an integer factor to see how a larger sample size with the
     # same relative frequencies results in higher confidence
     _test_ctable = np.array([[5, 12], [6, 4]])
     _log_or_w = 0.6
 
-    _fig.suptitle(f"CORD areas, log odds ratio width: {_log_or_w}")
-
     _cord_res = cord_test(_test_ctable, _log_or_w)
     _or_up = _cord_res.or_up
     _or_down = _cord_res.or_down
+
+    _fig, _ax = plt.subplots(1, 3, figsize=(14,4.5))
+
+    _fig.suptitle(f"CORD areas, log odds ratio width: {_log_or_w}")
 
     # Colors
     _c_up = '#fa5555'
@@ -158,7 +159,30 @@ def _(cord_test, np, plot_beta_area, plot_beta_bound, plot_beta_function, plt):
 
 
 @app.cell
-def _():
+def _(SyntheticCTable, cord_test, mo):
+    # Try now with synthetic data simulating a very rare event
+    _true_r = 0.5
+    _synth_data = SyntheticCTable(p1=0.02, odds_ratio=_true_r, seed=0)
+    _ctable = _synth_data.generate(1000)
+
+    _cord_res = cord_test(_ctable, 0.25)
+
+    mo.md(f"""
+    |     |  $\\neg X$ | $X$ |
+    |-----|-----------:|----:|
+    | $Y$ | {_ctable[0,0]} | {_ctable[0,1]} |
+    | $\\neg Y$ | {_ctable[1,0]} | {_ctable[1,1]} | 
+
+    True odds ratio: $r = {_true_r}$.
+
+    $P(r \\ge {_cord_res.or_up:.3f}) = {_cord_res.upper_band:.3f}$  
+    $P({_cord_res.or_up:.3f} > r > {_cord_res.or_down:.3f}) = {_cord_res.middle_band:.3f}$  
+    $P(r \\le {_cord_res.or_down:.3f}) = {_cord_res.lower_band:.3f}$ 
+
+    ```
+    {_cord_res}
+    ```
+    """)
     return
 
 
