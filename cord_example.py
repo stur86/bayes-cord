@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.14.7"
+__generated_with = "0.14.9"
 app = marimo.App(width="medium")
 
 
@@ -97,7 +97,13 @@ def _(np, plt):
         else:
             y2 = oddr2*x/(1+(oddr2-1)*x)
         ax.fill_between(x, y1, y2, color=c, alpha=alpha)
-    return plot_beta_area, plot_beta_bound, plot_beta_function
+
+    band_colors = [
+        '#fa5555',
+        '#55fa55',
+        '#5555fa'
+    ]
+    return band_colors, plot_beta_area, plot_beta_bound, plot_beta_function
 
 
 @app.cell(hide_code=True)
@@ -118,7 +124,15 @@ def _(mo):
 
 
 @app.cell
-def _(cord_test, np, plot_beta_area, plot_beta_bound, plot_beta_function, plt):
+def _(
+    band_colors,
+    cord_test,
+    np,
+    plot_beta_area,
+    plot_beta_bound,
+    plot_beta_function,
+    plt,
+):
 
     # Try multiplying this table by an integer factor to see how a larger sample size with the
     # same relative frequencies results in higher confidence
@@ -134,9 +148,9 @@ def _(cord_test, np, plot_beta_area, plot_beta_bound, plot_beta_function, plt):
     _fig.suptitle(f"CORD areas, log odds ratio width: {_log_or_w}")
 
     # Colors
-    _c_up = '#fa5555'
-    _c_mid = '#55fa55'
-    _c_down = '#5555fa'
+    _c_up = band_colors[0]
+    _c_mid = band_colors[1]
+    _c_down = band_colors[2]
 
     _ax[0].set_title(f"P: {_cord_res.upper_band:.3f}")
     plot_beta_function(_test_ctable, _ax[0])
@@ -185,26 +199,47 @@ def _(log_or_slider, mo, np, plot_beta_bound, plot_beta_function, plt):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""Now let's see another example, this time using synthetic data:""")
+    mo.md(
+        r"""
+    Now let's see another example, this time using synthetic data. We simulate a case control study. For example, imagine we're trying to detect whether exposure to a certain chemical increases the likelihood of a certain rare disease. The base rate for this disease is 2%, and it may be increased by an unknown factor (our odds ratio) upon exposure. Probability of exposure is 20%.
+
+    In these conditions, it would be hard to get a representative sample by random sampling. Instead, we sample 50 known people with the disease and verify their exposure status; then we sample the same number of people without the disease and do the same. We then compute our three bands based on these numbers.
+    """
+    )
     return
 
 
 @app.cell
-def _(SyntheticCTable, cord_test, mo):
+def _(SyntheticCTable, band_colors, cord_test, mo, plt):
     # Try now with synthetic data simulating a very rare event
-    _true_r = 0.5
-    _synth_data = SyntheticCTable(p1=0.02, odds_ratio=_true_r, seed=0)
-    _ctable = _synth_data.generate(1000)
+    _base_rate = 0.02
+    _true_r = 1.5
+    _p_exposure = 0.2
+    _synth_data = SyntheticCTable(p1=_base_rate, odds_ratio=_true_r, seed=0)
+    _ctable = _synth_data.generate(100, p_x=0.2, case_control=True)
 
     _cord_res = cord_test(_ctable, 0.25)
 
-    mo.md(f"""
+    _fig, _ax = plt.subplots()
+    _ax.set_title(f"Odds ratio middle band: {_cord_res.or_down:.3f} - {_cord_res.or_up:.3f}")
+
+    _ax.set_ylim(0, 1)
+    _ax.bar(["Lower band", "Middle band", "Upper band"], [_cord_res.lower_band, _cord_res.middle_band, _cord_res.upper_band], 
+        color=band_colors)
+    _ax.text(0, _cord_res.lower_band+0.02, f"{_cord_res.lower_band:.1%}", size='large', weight='bold', ha='center')
+    _ax.text(1, _cord_res.middle_band+0.02, f"{_cord_res.middle_band:.1%}", size='large', weight='bold', ha='center')
+    _ax.text(2, _cord_res.upper_band+0.02, f"{_cord_res.upper_band:.1%}", size='large', weight='bold', ha='center')
+
+    mo.vstack([
+        mo.md(f"""
     |     |  $\\neg X$ | $X$ |
     |-----|-----------:|----:|
     | $Y$ | {_ctable[0,0]} | {_ctable[0,1]} |
     | $\\neg Y$ | {_ctable[1,0]} | {_ctable[1,1]} | 
 
-    True odds ratio: $r = {_true_r}$.
+    Base rate: $p_c = {_base_rate*100:.1f}\\%$  
+    True odds ratio: $r = {_true_r}$  
+    Exposure probability: $p_x = {_p_exposure*100:.1f}\\%$
 
     $P(r \\ge {_cord_res.or_up:.3f}) = {_cord_res.upper_band:.3f}$  
     $P({_cord_res.or_up:.3f} > r > {_cord_res.or_down:.3f}) = {_cord_res.middle_band:.3f}$  
@@ -213,7 +248,9 @@ def _(SyntheticCTable, cord_test, mo):
     ```
     {_cord_res}
     ```
-    """)
+    """), mo.left(_fig)])
+
+
     return
 
 
