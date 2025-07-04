@@ -249,8 +249,60 @@ def _(SyntheticCTable, band_colors, cord_test, mo, plt):
     {_cord_res}
     ```
     """), mo.left(_fig)])
+    return
 
 
+@app.cell
+def _(SyntheticCTable, band_colors, cord_test, mo, np, plt):
+    _base_rate = 0.1
+    _odds_ratio_range = np.linspace(1.5, 4, 10)
+    _seed = 0
+    _tests = 5
+    _samples = 200
+
+    _band_points = []
+
+    for _or in _odds_ratio_range:
+        _sdata = SyntheticCTable(p1=_base_rate, odds_ratio=_or, seed=_seed)
+        _band_points.append([])
+        for _ in range(_tests):
+            _ctable_rnd = _sdata.generate(_samples, p_x=0.5)
+            _ctable_cc = _sdata.generate(_samples, p_x=0.5, case_control=True)
+
+            _res_rnd = cord_test(_ctable_rnd, np.log(1.25))
+            _res_cc = cord_test(_ctable_cc, np.log(1.25))
+            _band_points[-1].append([_res_rnd.lower_band, _res_rnd.middle_band, _res_rnd.upper_band,
+                                     _res_cc.lower_band, _res_cc.middle_band, _res_cc.upper_band])
+        _seed += 1
+
+    _or_axis = np.repeat(_odds_ratio_range, _tests)
+    _band_points = np.array(_band_points).reshape((-1,6))*100
+
+    _fig, _ax = plt.subplots()
+    _ax.set_title(f"Band probabilities at different odds ratios, {_samples} samples")
+
+    _ax.plot([_or_axis[0], _or_axis[-1]], [50, 50], c='w', lw=0.5, ls='--')
+    _ax.set_xlim(_or_axis[0], _or_axis[-1])
+    for _b_i in range(3):
+        _bname = ["lower", "middle", "upper"]
+        _ax.scatter(_or_axis, _band_points[:,_b_i], c=band_colors[_b_i], marker='x', lw=0.5, label=f"{_bname[_b_i]} random")
+        _ax.scatter(_or_axis, _band_points[:,_b_i+3], c=band_colors[_b_i], marker='^', lw=0.5, alpha=0.5, label=f"{_bname[_b_i]} case control")
+    _ax.set_xlabel("True odds ratio")
+    _ax.set_ylabel("P(r > 1.25)")
+
+    _ax.legend()
+
+    mo.vstack([
+        mo.md(f"""
+        Here is an example of how well the test does at detecting that the odds ratio is in the upper band for different samples, in both randomized and case control studies, with a base rate of {_base_rate:.1%}.
+    """),
+        mo.left(_fig)
+    ])
+    return
+
+
+@app.cell
+def _():
     return
 
 
