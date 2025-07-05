@@ -11,3 +11,6 @@ wheels/
 
 # HTML compiled files
 html/
+
+# Marimo cache
+__marimo__/
