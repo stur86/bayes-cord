@@ -34,7 +34,7 @@ def cord_test(table: NDArray[np.int_], w: float = 0.0) -> CordTestResult:
     Args:
         table [NDArray[np.int_]]:
             A 2x2 numpy array representing the contingency table.
-            The first column corresponds to the amounts of posive and negative
+            The first column corresponds to the amounts of positive and negative
             results for the condition of interest with no exposure,
             and the second column corresponds to the amounts of positive and
             negative results for the condition of interest with exposure.
