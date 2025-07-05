@@ -201,7 +201,7 @@ def _(log_or_slider, mo, np, plot_beta_bound, plot_beta_function, plt):
 def _(mo):
     mo.md(
         r"""
-    Now let's see another example, this time using synthetic data. We simulate a case control study. For example, imagine we're trying to detect whether exposure to a certain chemical increases the likelihood of a certain rare disease. The base rate for this disease is 2%, and it may be increased by an unknown factor (our odds ratio) upon exposure. Probability of exposure is 20%.
+    Now let's see another example, this time using synthetic data. We simulate a case control study. For example, imagine we're trying to detect whether exposure to a certain chemical increases the likelihood of a certain rare disease. The baseline rate for this disease is 2%, and it may be increased by an unknown factor (our odds ratio) upon exposure. Probability of exposure is 20%.
 
     In these conditions, it would be hard to get a representative sample by random sampling. Instead, we sample 50 known people with the disease and verify their exposure status; then we sample the same number of people without the disease and do the same. We then compute our three bands based on these numbers.
     """
@@ -212,10 +212,10 @@ def _(mo):
 @app.cell
 def _(SyntheticCTable, band_colors, cord_test, mo, plt):
     # Try now with synthetic data simulating a very rare event
-    _base_rate = 0.02
+    _baseline_rate = 0.02
     _true_r = 1.5
     _p_exposure = 0.2
-    _synth_data = SyntheticCTable(p1=_base_rate, odds_ratio=_true_r, seed=0)
+    _synth_data = SyntheticCTable(p1=_baseline_rate, odds_ratio=_true_r, seed=0)
     _ctable = _synth_data.generate(100, p_x=0.2, case_control=True)
 
     _cord_res = cord_test(_ctable, 0.25)
@@ -237,7 +237,7 @@ def _(SyntheticCTable, band_colors, cord_test, mo, plt):
     | $Y$ | {_ctable[0,0]} | {_ctable[0,1]} |
     | $\\neg Y$ | {_ctable[1,0]} | {_ctable[1,1]} | 
 
-    Base rate: $p_c = {_base_rate*100:.1f}\\%$  
+    Baseline rate: $p_c = {_baseline_rate*100:.1f}\\%$  
     True odds ratio: $r = {_true_r}$  
     Exposure probability: $p_x = {_p_exposure*100:.1f}\\%$
 
@@ -254,7 +254,7 @@ def _(SyntheticCTable, band_colors, cord_test, mo, plt):
 
 @app.cell
 def _(SyntheticCTable, band_colors, cord_test, mo, np, plt):
-    _base_rate = 0.1
+    _baseline_rate = 0.1
     _odds_ratio_range = np.linspace(1.5, 4, 10)
     _seed = 0
     _tests = 5
@@ -263,7 +263,7 @@ def _(SyntheticCTable, band_colors, cord_test, mo, np, plt):
     _band_points = []
 
     for _or in _odds_ratio_range:
-        _sdata = SyntheticCTable(p1=_base_rate, odds_ratio=_or, seed=_seed)
+        _sdata = SyntheticCTable(p1=_baseline_rate, odds_ratio=_or, seed=_seed)
         _band_points.append([])
         for _ in range(_tests):
             _ctable_rnd = _sdata.generate(_samples, p_x=0.5)
@@ -294,7 +294,7 @@ def _(SyntheticCTable, band_colors, cord_test, mo, np, plt):
 
     mo.vstack([
         mo.md(f"""
-        Here is an example of how well the test does at detecting that the odds ratio is in the upper band for different samples, in both randomized and case control studies, with a base rate of {_base_rate:.1%}.
+        Here is an example of how well the test does at detecting that the odds ratio is in the upper band for different samples, in both randomized and case control studies, with a baseline rate of {_baseline_rate:.1%}.
     """),
         mo.left(_fig)
     ])
