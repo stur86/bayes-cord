@@ -76,8 +76,8 @@ def _(np, plt):
         z = x**a*(1-x)**b*y**c*(1-y)**d
 
         ax.set_aspect(1.0)
-        ax.set_xlabel("$p_1$")
-        ax.set_ylabel("$p_2$")
+        ax.set_xlabel("$p_c$")
+        ax.set_ylabel("$p_e$")
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
         ax.pcolormesh(x, y, z)
@@ -123,7 +123,7 @@ def _(mo):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(
     band_colors,
     cord_test,
@@ -186,6 +186,7 @@ def _(log_or_slider, mo, np, plot_beta_bound, plot_beta_function, plt):
     plot_beta_function(_test_ctable, _ax)
     plot_beta_bound(np.exp(log_or_slider.value), _ax)
     plot_beta_bound(np.exp(-log_or_slider.value), _ax)
+    _ax.plot([0, 1], [0, 1], c='w', lw=0.5, ls='--')
 
     mo.vstack([
         mo.md("""
@@ -209,7 +210,7 @@ def _(mo):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(SyntheticCTable, band_colors, cord_test, mo, plt):
     # Try now with synthetic data simulating a very rare event
     _baseline_rate = 0.02
@@ -252,7 +253,7 @@ def _(SyntheticCTable, band_colors, cord_test, mo, plt):
     return
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(SyntheticCTable, band_colors, cord_test, mo, np, plt):
     _baseline_rate = 0.1
     _odds_ratio_range = np.linspace(1.5, 4, 10)
@@ -279,18 +280,81 @@ def _(SyntheticCTable, band_colors, cord_test, mo, np, plt):
     _band_points = np.array(_band_points).reshape((-1,6))*100
 
     _fig, _ax = plt.subplots()
-    _ax.set_title(f"Band probabilities at different odds ratios, {_samples} samples")
+    _ax.set_title(f"Band probabilities at different odds ratios, {_samples} samples, middle band: [{_res_rnd.or_down}-{_res_rnd.or_up}]")
 
-    _ax.plot([_or_axis[0], _or_axis[-1]], [50, 50], c='w', lw=0.5, ls='--')
+    _ax.plot([_or_axis[0], _or_axis[-1]], [50, 50], c='k', lw=0.5, ls='--')
     _ax.set_xlim(_or_axis[0], _or_axis[-1])
     for _b_i in range(3):
         _bname = ["lower", "middle", "upper"]
         _ax.scatter(_or_axis, _band_points[:,_b_i], c=band_colors[_b_i], marker='x', lw=0.5, label=f"{_bname[_b_i]} random")
         _ax.scatter(_or_axis, _band_points[:,_b_i+3], c=band_colors[_b_i], marker='^', lw=0.5, alpha=0.5, label=f"{_bname[_b_i]} case control")
     _ax.set_xlabel("True odds ratio")
-    _ax.set_ylabel("P(r > 1.25)")
+    _ax.set_ylabel("%")
 
     _ax.legend()
+
+    mo.vstack([
+        mo.md(f"""
+        Here is an example of how well the test does at detecting that the odds ratio is in the upper band for different samples, in both randomized and case control studies, with a baseline rate of {_baseline_rate:.1%}.
+    """),
+        mo.left(_fig)
+    ])
+    return
+
+
+@app.cell(hide_code=True)
+def _(SyntheticCTable, band_colors, cord_test, mo, np, plt):
+    _log_odds_w = np.log(2)
+
+    _sample_sizes = np.logspace(1, 3, 10).astype(np.int32)
+    _tests = 10
+    _baseline_rate = 0.1
+
+    _sdata = SyntheticCTable(p1=_baseline_rate, odds_ratio=1.0, seed=0)
+    _null_points = []
+
+    for _s in _sample_sizes:
+        _null_points.append([])
+        for _ in range(_tests):
+            _ctable_rnd = _sdata.generate(_s, p_x=0.5)
+            _ctable_cc = _sdata.generate(_s, p_x=0.5, case_control=True)
+
+            _res_rnd = cord_test(_ctable_rnd, _log_odds_w)
+            _res_cc = cord_test(_ctable_cc, _log_odds_w)
+            _null_points[-1].append([_res_rnd.lower_band, _res_rnd.middle_band, _res_rnd.upper_band,
+                                     _res_cc.lower_band, _res_cc.middle_band, _res_cc.upper_band])
+
+    _s_axis = np.repeat(_sample_sizes, _tests)
+    _null_points = np.array(_null_points).reshape((-1,6))*100
+
+    _fig, (_ax, _ax2) = plt.subplots(1, 2, figsize=(14,6))
+    _ax.set_title(f"Band probabilities for no effect vs sample, middle band: [{_res_rnd.or_down}-{_res_rnd.or_up}]")
+
+    _ax.plot([_s_axis[0], _s_axis[-1]], [50, 50], c='k', lw=0.5, ls='--')
+    _ax.set_xlim(_s_axis[0], _s_axis[-1])
+    _ax.set_xscale("log")
+    for _b_i in range(3):
+        _bname = ["lower", "middle", "upper"]
+        _ax.scatter(_s_axis, _null_points[:,_b_i], c=band_colors[_b_i], marker='x', lw=0.5, label=f"{_bname[_b_i]} random")
+        _ax.scatter(_s_axis, _null_points[:,_b_i+3], c=band_colors[_b_i], marker='^', lw=0.5, alpha=0.5, label=f"{_bname[_b_i]} case control")
+    _ax.set_xlabel("Sample size")
+    _ax.set_ylabel("%")
+
+    _ax.legend()
+
+    _ax2.set_xlim(_s_axis[0], _s_axis[-1])
+    _ax2.set_xscale("log")
+    _ax2.set_xlabel("Sample size")
+    _ax2.set_ylabel("%")
+    _ax2.set_title("% of trials that test with the middle band as the most probable")
+
+    _has_rnd_middle_max = np.sum((np.argmax(_null_points[:,:3], axis=1) == 1).reshape((-1, _tests)), axis=1)*100/_tests
+    _has_cc_middle_max = np.sum((np.argmax(_null_points[:,3:], axis=1) == 1).reshape((-1, _tests)), axis=1)*100/_tests
+
+    _ax2.scatter(_sample_sizes, _has_rnd_middle_max, c='k', marker='x', label="random")
+    _ax2.scatter(_sample_sizes, _has_cc_middle_max, c='k', marker='^', label="case control")
+
+    _ax2.legend()
 
     mo.vstack([
         mo.md(f"""
